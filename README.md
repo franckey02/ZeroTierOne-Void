@@ -6,9 +6,9 @@ ZeroTierOne for Void linux
 #add libs
 sudo xbps-install -S openssl libstdc++ glibc libgcc wget
 #download and install xbps pkg of zerotierone
-wget https://github.com/franckey02/ZeroTierOne-Void/releases/download/1.16.0/zerotierone-1.16.0_1.x86_64.xbps
-sudo xbps-rindex -a ./zerotierone-1.16.0_1.x86_64.xbps
-sudo xbps-install -R $PWD zerotierone-1.16.0_1
+wget https://github.com/franckey02/ZeroTierOne-Void/releases/download/1.16.1/zerotierone-1.16.1_1.x86_64.xbps
+sudo xbps-rindex -a ./zerotierone-1.16.1_1.x86_64.xbps
+sudo xbps-install -R $PWD zerotierone-1.16.1_1
 #add service
 sudo mkdir /etc/sv/zerotier-one
 clear
