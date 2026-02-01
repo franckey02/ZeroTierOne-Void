@@ -24,9 +24,9 @@ or ...
 ```
 #Download and extract source
 wget https://github.com/franckey02/ZeroTierOne-Void/archive/refs/tags/1.16.1.tar.gz
-tar -xzvf 1.16.0.tar.gz
+tar -xzvf 1.16.1.tar.gz
 #Building
-cd ZeroTierOne-Void-1.16.0
+cd ZeroTierOne-Void-1.16.1
 sudo xbps-install -S git make gcc  linux-headers openssl-devel libffi-devel rust cargo  openssl libstdc++ glibc libgcc wget
 sudo xbps-install -S pkg-config
 sudo xbps-install -S openssl-devel
