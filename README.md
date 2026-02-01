@@ -32,7 +32,7 @@ sudo xbps-install -S pkg-config
 sudo xbps-install -S openssl-devel
 make -j2
 #Install
-make install
+sudo make install
 #Add service
 sudo mkdir /etc/sv/zerotier-one
 clear
