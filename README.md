@@ -23,7 +23,7 @@ or ...
 # Build & install:
 ```
 #Download and extract source
-wget https://github.com/franckey02/ZeroTierOne-Void/archive/refs/tags/1.16.0.tar.gz
+wget https://github.com/franckey02/ZeroTierOne-Void/archive/refs/tags/1.16.1.tar.gz
 tar -xzvf 1.16.0.tar.gz
 #Building
 cd ZeroTierOne-Void-1.16.0
