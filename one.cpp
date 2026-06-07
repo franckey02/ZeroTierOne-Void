@@ -398,7 +398,7 @@ static int cli(int argc, char** argv)
 									const int64_t now = OSUtils::now();
 									int64_t lastSendDiff = (uint64_t)path["lastSend"] ? now - (uint64_t)path["lastSend"] : -1;
 									int64_t lastReceiveDiff = (uint64_t)path["lastReceive"] ? now - (uint64_t)path["lastReceive"] : -1;
-									OSUtils::ztsnprintf(tmp, sizeof(tmp), "%s;%lld;%lld", addr.c_str(), lastSendDiff, lastReceiveDiff);
+									OSUtils::ztsnprintf(tmp, sizeof(tmp), "%s;%lld;%lld", addr.c_str(), static_cast<long long>(lastSendDiff), static_cast<long long>(lastReceiveDiff));
 									bestPath = tmp;
 									break;
 								}
@@ -411,7 +411,7 @@ static int cli(int argc, char** argv)
 						int64_t vmin = p["versionMinor"];
 						int64_t vrev = p["versionRev"];
 						if (vmaj >= 0) {
-							OSUtils::ztsnprintf(ver, sizeof(ver), "%lld.%lld.%lld", vmaj, vmin, vrev);
+							OSUtils::ztsnprintf(ver, sizeof(ver), "%lld.%lld.%lld", static_cast<long long>(vmaj), static_cast<long long>(vmin), static_cast<long long>(vrev));
 						}
 						else {
 							ver[0] = '-';
@@ -473,7 +473,7 @@ static int cli(int argc, char** argv)
 									const int64_t now = OSUtils::now();
 									int64_t lastSendDiff = (uint64_t)path["lastSend"] ? now - (uint64_t)path["lastSend"] : -1;
 									int64_t lastReceiveDiff = (uint64_t)path["lastReceive"] ? now - (uint64_t)path["lastReceive"] : -1;
-									OSUtils::ztsnprintf(tmp, sizeof(tmp), "%-8lld %-8lld %s", lastSendDiff, lastReceiveDiff, addr.c_str());
+									OSUtils::ztsnprintf(tmp, sizeof(tmp), "%-8lld %-8lld %s", static_cast<long long>(lastSendDiff), static_cast<long long>(lastReceiveDiff), addr.c_str());
 									if (p["tunneled"]) {
 										bestPath = std::string("RELAY ") + tmp;
 									}
@@ -492,7 +492,7 @@ static int cli(int argc, char** argv)
 						int64_t vmin = p["versionMinor"];
 						int64_t vrev = p["versionRev"];
 						if (vmaj >= 0) {
-							OSUtils::ztsnprintf(ver, sizeof(ver), "%lld.%lld.%lld", vmaj, vmin, vrev);
+							OSUtils::ztsnprintf(ver, sizeof(ver), "%lld.%lld.%lld", static_cast<long long>(vmaj), static_cast<long long>(vmin), static_cast<long long>(vrev));
 						}
 						else {
 							ver[0] = '-';
@@ -655,7 +655,7 @@ static int cli(int argc, char** argv)
 								printf("-");
 							}
 							printf("\n");
-							for (int i = 0; i < p.size(); i++) {
+							for (int i = 0; i < (int)p.size(); i++) {
 								printf(
 									"%2d: %26s %51s %.16llx %12d\n",
 									i,
@@ -671,7 +671,7 @@ static int cli(int argc, char** argv)
 								printf("-");
 							}
 							printf("\n");
-							for (int i = 0; i < p.size(); i++) {
+							for (int i = 0; i < (int)p.size(); i++) {
 								printf(
 									"%2d: %8.2f %8.2f %10d %7.4f %11d %11d %9d %7d %7d\n",
 									i,
@@ -820,7 +820,7 @@ static int cli(int argc, char** argv)
 								else if (status == "OK") {
 									int64_t expiresIn = ((int64_t)authenticationExpiryTime - OSUtils::now()) / 1000LL;
 									if (expiresIn >= 0) {
-										printf("    AUTH OK, expires in: %lld seconds" ZT_EOL_S, expiresIn);
+										printf("    AUTH OK, expires in: %lld seconds" ZT_EOL_S, static_cast<long long>(expiresIn));
 									}
 								}
 							}
@@ -1656,7 +1656,7 @@ static int idtool(int argc, char** argv)
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> wbuf;
 			w.serialize(wbuf);
 			char fn[128];
-			OSUtils::ztsnprintf(fn, sizeof(fn), "%.16llx.moon", w.id());
+			OSUtils::ztsnprintf(fn, sizeof(fn), "%.16llx.moon", static_cast<unsigned long long>(w.id()));
 			OSUtils::writeFile(fn, wbuf.data(), wbuf.size());
 			printf("wrote %s (signed world with timestamp %llu)" ZT_EOL_S, fn, (unsigned long long)now);
 		}
@@ -1743,18 +1743,12 @@ static int _setCapabilities(int flags)
 
 static void _recursiveChown(const char* path, uid_t uid, gid_t gid)
 {
-	struct dirent de;
 	struct dirent* dptr;
 	lchown(path, uid, gid);
 	DIR* d = opendir(path);
 	if (! d)
 		return;
-	dptr = (struct dirent*)0;
-	for (;;) {
-		if (readdir_r(d, &de, &dptr) != 0)
-			break;
-		if (! dptr)
-			break;
+	while ((dptr = readdir(d)) != nullptr) {
 		if ((strcmp(dptr->d_name, ".") != 0) && (strcmp(dptr->d_name, "..") != 0) && (strlen(dptr->d_name) > 0)) {
 			std::string p(path);
 			p.push_back(ZT_PATH_SEPARATOR);

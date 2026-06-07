@@ -174,6 +174,16 @@ size_t curlResponseWrite(void* ptr, size_t size, size_t nmemb, std::string* data
 }
 #endif
 
+#if defined(MAX_PATH)
+	#define ZT_MAX_PATH 	MAX_PATH
+#elif defined(_MAX_PATH)
+    #define ZT_MAX_PATH		_MAX_PATH
+#elif defined(PATH_MAX)
+    #define ZT_MAX_PATH 	PATH_MAX
+#else
+    #define ZT_MAX_PATH 	4096
+#endif
+
 namespace ZeroTier {
 
 std::string ssoResponseTemplate = R"""(
@@ -567,7 +577,7 @@ static void _networkToJson(nlohmann::json& nj, NetworkState& ns)
 			break;
 	}
 
-	OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", ns.config().nwid);
+	OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", static_cast<unsigned long long>(ns.config().nwid));
 	nj["id"] = tmp;
 	nj["nwid"] = tmp;
 	OSUtils::ztsnprintf(
@@ -665,7 +675,7 @@ static void _peerToJson(nlohmann::json& pj, const ZT_Peer* peer, SharedPtr<Bond>
 			break;
 	}
 
-	OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.10llx", peer->address);
+	OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.10llx", static_cast<unsigned long long>(peer->address));
 	pj["address"] = tmp;
 	pj["versionMajor"] = peer->versionMajor;
 	pj["versionMinor"] = peer->versionMinor;
@@ -725,7 +735,7 @@ static void _peerToJson(nlohmann::json& pj, const ZT_Peer* peer, SharedPtr<Bond>
 static void _moonToJson(nlohmann::json& mj, const World& world)
 {
 	char tmp[4096];
-	OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", world.id());
+	OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", static_cast<unsigned long long>(world.id()));
 	mj["id"] = tmp;
 	mj["timestamp"] = world.timestamp();
 	mj["signature"] = Utils::hex(world.signature().data, ZT_ECC_SIGNATURE_LEN, tmp);
@@ -1042,7 +1052,6 @@ class OneServiceImpl : public OneService {
 		return;
 #endif
 		_node->initMultithreading(_concurrency, _cpuPinningEnabled);
-		bool pinning = _cpuPinningEnabled;
 	}
 
 #ifdef ZT_OPENTELEMETRY_ENABLED
@@ -1239,7 +1248,7 @@ class OneServiceImpl : public OneService {
 
 				if (_ports[2]) {
 					char uniqueName[64];
-					OSUtils::ztsnprintf(uniqueName, sizeof(uniqueName), "ZeroTier/%.10llx@%u", _node->address(), _ports[2]);
+					OSUtils::ztsnprintf(uniqueName, sizeof(uniqueName), "ZeroTier/%.10llx@%u", static_cast<unsigned long long>(_node->address()), _ports[2]);
 					_portMapper = new PortMapper(_ports[2], uniqueName);
 				}
 			}
@@ -1711,7 +1720,7 @@ class OneServiceImpl : public OneService {
 	virtual bool setNetworkSettings(const uint64_t nwid, const NetworkSettings& settings)
 	{
 		char nlcpath[4096];
-		OSUtils::ztsnprintf(nlcpath, sizeof(nlcpath), "%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf", _networksPath.c_str(), nwid);
+		OSUtils::ztsnprintf(nlcpath, sizeof(nlcpath), "%s" ZT_PATH_SEPARATOR_S "%.16llx.local.conf", _networksPath.c_str(), static_cast<unsigned long long>(nwid));
 		FILE* out = fopen(nlcpath, "w");
 		if (out) {
 			fprintf(out, "allowManaged=%d\n", (int)settings.allowManaged);
@@ -1743,6 +1752,8 @@ class OneServiceImpl : public OneService {
 		std::string statusPath = "/status";
 		std::string metricsPath = "/metrics";
 
+		
+
 		std::vector<std::string> noAuthEndpoints { "/sso", "/health" };
 
 		auto setContent = [=](const httplib::Request& req, httplib::Response& res, std::string content) {
@@ -1769,7 +1780,7 @@ class OneServiceImpl : public OneService {
 		//
 		if (_enableWebServer) {
 			static std::string appUiPath = "/app";
-			static char appUiDir[16384];
+			static char appUiDir[sizeof(_homePath) + sizeof(appUiPath)];
 			snprintf(appUiDir, sizeof(appUiDir), "%s%s", _homePath.c_str(), appUiPath.c_str());
 
 			auto ret = _controlPlane.set_mount_point(appUiPath, appUiDir);
@@ -1796,7 +1807,7 @@ class OneServiceImpl : public OneService {
 					auto match = req.matches[1];
 					if (match.matched) {
 						// fallback
-						char indexHtmlPath[16384];
+						char indexHtmlPath[sizeof(appUiDir) + ZT_MAX_PATH + 13];
 						snprintf(indexHtmlPath, sizeof(indexHtmlPath), "%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
 						// fprintf(stderr, "fallback path %s\n", indexHtmlPath);
 
@@ -1820,7 +1831,7 @@ class OneServiceImpl : public OneService {
 
 					// add .html
 					std::string htmlFile;
-					char htmlPath[16384];
+					char htmlPath[sizeof(appUiDir) + ZT_MAX_PATH + 6];
 					snprintf(htmlPath, sizeof(htmlPath), "%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
 					// fprintf(stderr, "path: %s\n", htmlPath);
 					if (OSUtils::readFile(htmlPath, htmlFile)) {
@@ -2202,7 +2213,7 @@ class OneServiceImpl : public OneService {
 
 			if (! found && seed != 0) {
 				char tmp[64];
-				OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", id);
+				OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.16llx", static_cast<unsigned long long>(id));
 				out["id"] = tmp;
 				out["roots"] = json::array();
 				out["timestamp"] = 0;
@@ -2425,7 +2436,7 @@ class OneServiceImpl : public OneService {
 			auto out = json::object();
 			char tmp[256] = {};
 
-			OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.10llx", status.address);
+			OSUtils::ztsnprintf(tmp, sizeof(tmp), "%.10llx", static_cast<unsigned long long>(status.address));
 			out["address"] = tmp;
 			out["publicIdentity"] = status.publicIdentity;
 			out["online"] = (bool)(status.online != 0);
@@ -2452,7 +2463,7 @@ class OneServiceImpl : public OneService {
 			// Enumerate all local address/port pairs that this node is listening on
 			std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
 			auto boundAddrArray = json::array();
-			for (int i = 0; i < boundAddrs.size(); i++) {
+			for (std::size_t i = 0; i < boundAddrs.size(); i++) {
 				char ipBuf[64] = { 0 };
 				boundAddrs[i].toString(ipBuf);
 				boundAddrArray.push_back(ipBuf);
@@ -2461,7 +2472,7 @@ class OneServiceImpl : public OneService {
 			// Enumerate all external address/port pairs that are reported for this node
 			std::vector<InetAddress> surfaceAddrs = _node->SurfaceAddresses();
 			auto surfaceAddrArray = json::array();
-			for (int i = 0; i < surfaceAddrs.size(); i++) {
+			for (std::size_t i = 0; i < surfaceAddrs.size(); i++) {
 				char ipBuf[64] = { 0 };
 				surfaceAddrs[i].toString(ipBuf);
 				surfaceAddrArray.push_back(ipBuf);
@@ -3528,13 +3539,13 @@ class OneServiceImpl : public OneService {
 				if (! n.tap()) {
 					try {
 						char friendlyName[128];
-						OSUtils::ztsnprintf(friendlyName, sizeof(friendlyName), "ZeroTier One [%.16llx]", nwid);
+						OSUtils::ztsnprintf(friendlyName, sizeof(friendlyName), "ZeroTier One [%.16llx]", static_cast<unsigned long long>(nwid));
 
 						n.setTap(EthernetTap::newInstance(nullptr, _concurrency, _cpuPinningEnabled, _homePath.c_str(), MAC(nwc->mac), nwc->mtu, (unsigned int)ZT_IF_METRIC, nwid, friendlyName, StapFrameHandler, (void*)this));
 						*nuptr = (void*)&n;
 
 						char nlcpath[256];
-						OSUtils::ztsnprintf(nlcpath, sizeof(nlcpath), "%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf", _homePath.c_str(), nwid);
+						OSUtils::ztsnprintf(nlcpath, sizeof(nlcpath), "%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf", _homePath.c_str(), static_cast<unsigned long long>(nwid));
 						std::string nlcbuf;
 						if (OSUtils::readFile(nlcpath, nlcbuf)) {
 							Dictionary<4096> nc;
@@ -3600,9 +3611,19 @@ class OneServiceImpl : public OneService {
 					//
 					// without WindowsEthernetTap::isInitialized() returning true, the won't actually
 					// be online yet and setting managed routes on it will fail.
+					//
+					// Release _nets_m for the duration of this wait.
+					std::shared_ptr<EthernetTap> tapCopy = n.tap();
+					_nets_m.unlock();
 					const int MAX_SLEEP_COUNT = 500;
-					for (int i = 0; ! ((WindowsEthernetTap*)(n.tap().get()))->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
+					for (int i = 0; ! ((WindowsEthernetTap*)(tapCopy.get()))->isInitialized() && i < MAX_SLEEP_COUNT; i++) {
 						Sleep(10);
+					}
+					_nets_m.lock();
+					// Re-look it up and bail if it was removed while we were sleeping.
+					std::map<uint64_t, NetworkState>::iterator nit = _nets.find(nwid);
+					if (nit == _nets.end() || ! nit->second.tap()) {
+						return -999;
 					}
 #endif
 					syncManagedStuff(n, true, true, true);
@@ -3631,7 +3652,7 @@ class OneServiceImpl : public OneService {
 #endif
 					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
 						char nlcpath[256];
-						OSUtils::ztsnprintf(nlcpath, sizeof(nlcpath), "%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf", _homePath.c_str(), nwid);
+						OSUtils::ztsnprintf(nlcpath, sizeof(nlcpath), "%s" ZT_PATH_SEPARATOR_S "networks.d" ZT_PATH_SEPARATOR_S "%.16llx.local.conf", _homePath.c_str(), static_cast<unsigned long long>(nwid));
 						OSUtils::rm(nlcpath);
 					}
 				}
